@@ -7,6 +7,7 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.job.builder.FlowBuilder;
 import org.springframework.batch.core.job.flow.Flow;
+import org.springframework.batch.core.job.flow.support.SimpleFlow;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.SimpleJobLauncher;
 import org.springframework.batch.core.repository.JobRepository;
@@ -15,6 +16,7 @@ import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import javax.sql.DataSource;
@@ -55,16 +57,43 @@ public class JobConfig {
         return new FlowBuilder<Flow>("flow2")
                 .start(stepBuilderFactory.get("step2")
                         .tasklet(tasklet()).build())
-                .next(stepBuilderFactory.get("step3")
+                .build();
+    }
+
+    @Bean
+    public Flow flow3() {
+        return new FlowBuilder<Flow>("flow3")
+                .start(stepBuilderFactory.get("step3")
+                        .tasklet(tasklet()).build())
+                .build();
+    }
+
+
+    @Bean
+    public Flow flow4() {
+        return new FlowBuilder<Flow>("flow4")
+                .start(stepBuilderFactory.get("step4")
                         .tasklet(tasklet()).build())
                 .build();
     }
 
     @Bean
+    public Flow splitFlow() {
+        return new FlowBuilder<SimpleFlow>("splitFlow")
+                .split(taskExecutor())
+                .add(flow1(), flow2(), flow3(), flow4())
+                .build();
+    }
+
+    @Bean
+    public TaskExecutor taskExecutor() {
+        return new SimpleAsyncTaskExecutor("spring_batch");
+    }
+
+    @Bean
     public Job job() {
         return jobBuilderFactory.get("job")
-                .start(flow1())
-                .split(new SimpleAsyncTaskExecutor()).add(flow2())
+                .start(splitFlow())
                 .end()
                 .build();
     }
